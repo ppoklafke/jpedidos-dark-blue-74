@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,98 +36,40 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Eye, CheckCircle, DollarSign, ShoppingCart, Users, Package } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useOrders } from "@/hooks/useOrders";
+import { useClients } from "@/hooks/useClients";
+import { useProducts } from "@/hooks/useProducts";
 
-// Mock data - será substituído por dados do Supabase
-type OrderStatus = "Aberto" | "Fechado";
-
-interface Order {
-  id: number;
-  date: string;
-  client: string;
-  clientEmail: string;
-  clientPhone: string;
-  total: number;
-  status: OrderStatus;
-  withInvoice: boolean;
-  items: Array<{
-    product: string;
-    quantity: number;
-    price: number;
-  }>;
-}
-
-const mockOpenOrders: Order[] = [
-  {
-    id: 1,
-    date: "2024-01-25",
-    client: "João Silva",
-    clientEmail: "joao@email.com",
-    clientPhone: "(11) 99999-1234",
-    total: 1250.00,
-    status: "Aberto",
-    withInvoice: true,
-    items: [
-      { product: "Produto A", quantity: 2, price: 500.00 },
-      { product: "Produto B", quantity: 1, price: 250.00 }
-    ]
-  },
-  {
-    id: 2,
-    date: "2024-01-24",
-    client: "Maria Santos",
-    clientEmail: "maria@email.com", 
-    clientPhone: "(11) 99999-5678",
-    total: 850.50,
-    status: "Aberto",
-    withInvoice: false,
-    items: [
-      { product: "Produto C", quantity: 3, price: 283.50 }
-    ]
-  },
-  {
-    id: 3,
-    date: "2024-01-24", 
-    client: "Empresa ABC Ltda",
-    clientEmail: "contato@abc.com",
-    clientPhone: "(11) 99999-9999",
-    total: 3200.00,
-    status: "Aberto",
-    withInvoice: true,
-    items: [
-      { product: "Produto D", quantity: 4, price: 800.00 }
-    ]
-  }
-];
-
-const mockKPIs = {
-  today: {
-    orders: 5,
-    revenue: 2450.00,
-    customers: 8,
-    products: 15
-  },
-  thisWeek: {
-    orders: 23,
-    revenue: 12350.00,
-    customers: 45,
-    products: 67
-  },
-  thisMonth: {
-    orders: 89,
-    revenue: 45200.00,
-    customers: 156,
-    products: 234
-  }
-};
+// Dados reais do Supabase
 
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
-  const [orders, setOrders] = useState(mockOpenOrders);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [kpis, setKpis] = useState({
+    orders: 0,
+    revenue: 0,
+    customers: 0,
+    products: 0
+  });
 
-  const currentKPIs = mockKPIs[selectedPeriod as keyof typeof mockKPIs];
+  const { orders, updateOrderStatus } = useOrders();
+  const { clients } = useClients();
+  const { products } = useProducts();
+
+  // Calcular KPIs baseado nos dados reais
+  useEffect(() => {
+    const openOrders = orders.filter(order => order.status === "Aberto");
+    const revenue = openOrders.reduce((sum, order) => sum + order.total_amount, 0);
+    
+    setKpis({
+      orders: openOrders.length,
+      revenue: revenue,
+      customers: clients.length,
+      products: products.length
+    });
+  }, [orders, clients, products]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -156,17 +98,9 @@ export default function Dashboard() {
     }
   };
 
-  const confirmCloseOrder = () => {
+  const confirmCloseOrder = async () => {
     if (selectedOrder) {
-      setOrders(orders.map(order => 
-        order.id === selectedOrder.id 
-          ? { ...order, status: "Fechado" }
-          : order
-      ));
-      toast({
-        title: "Pedido fechado",
-        description: `Pedido foi fechado com sucesso.`,
-      });
+      await updateOrderStatus(selectedOrder.id, "Fechado");
       setIsCloseDialogOpen(false);
       setSelectedOrder(null);
     }
@@ -206,12 +140,12 @@ export default function Dashboard() {
               <TableBody>
                 {orders.filter(order => order.status === "Aberto").map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell>{formatDate(order.date)}</TableCell>
-                    <TableCell>{order.client}</TableCell>
-                    <TableCell>{formatCurrency(order.total)}</TableCell>
+                    <TableCell>{formatDate(order.order_date)}</TableCell>
+                    <TableCell>{order.clients?.name}</TableCell>
+                    <TableCell>{formatCurrency(order.total_amount)}</TableCell>
                     <TableCell>
-                      <Badge variant={order.withInvoice ? "default" : "secondary"}>
-                        {order.withInvoice ? "Com NF" : "Sem NF"}
+                      <Badge variant={order.with_invoice ? "default" : "secondary"}>
+                        {order.with_invoice ? "Com NF" : "Sem NF"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -257,7 +191,7 @@ export default function Dashboard() {
                     <ShoppingCart className="h-8 w-8 text-primary" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Pedidos</p>
-                      <p className="text-2xl font-bold">{currentKPIs.orders}</p>
+                      <p className="text-2xl font-bold">{kpis.orders}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -269,7 +203,7 @@ export default function Dashboard() {
                     <DollarSign className="h-8 w-8 text-success" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Faturamento</p>
-                      <p className="text-2xl font-bold">{formatCurrency(currentKPIs.revenue)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(kpis.revenue)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -281,7 +215,7 @@ export default function Dashboard() {
                     <Users className="h-8 w-8 text-info" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Clientes</p>
-                      <p className="text-2xl font-bold">{currentKPIs.customers}</p>
+                      <p className="text-2xl font-bold">{kpis.customers}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -293,7 +227,7 @@ export default function Dashboard() {
                     <Package className="h-8 w-8 text-warning" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Produtos</p>
-                      <p className="text-2xl font-bold">{currentKPIs.products}</p>
+                      <p className="text-2xl font-bold">{kpis.products}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -316,15 +250,15 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Nome</label>
-                      <p className="font-medium">{selectedOrder.client}</p>
+                      <p className="font-medium">{selectedOrder.clients?.name}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Email</label>
-                      <p className="font-medium">{selectedOrder.clientEmail}</p>
+                      <p className="font-medium">{selectedOrder.clients?.email || "Não informado"}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Telefone</label>
-                      <p className="font-medium">{selectedOrder.clientPhone}</p>
+                      <p className="font-medium">{selectedOrder.clients?.phone || "Não informado"}</p>
                     </div>
                   </div>
                 </div>
@@ -335,7 +269,7 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Data</label>
-                      <p className="font-medium">{formatDate(selectedOrder.date)}</p>
+                      <p className="font-medium">{formatDate(selectedOrder.order_date)}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Status</label>
@@ -345,8 +279,8 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Nota Fiscal</label>
-                      <Badge variant={selectedOrder.withInvoice ? "default" : "secondary"}>
-                        {selectedOrder.withInvoice ? "Com NF" : "Sem NF"}
+                      <Badge variant={selectedOrder.with_invoice ? "default" : "secondary"}>
+                        {selectedOrder.with_invoice ? "Com NF" : "Sem NF"}
                       </Badge>
                     </div>
                   </div>
@@ -360,15 +294,17 @@ export default function Dashboard() {
                       <TableRow>
                         <TableHead>Produto</TableHead>
                         <TableHead>Quantidade</TableHead>
+                        <TableHead>Valor Unit.</TableHead>
                         <TableHead>Valor Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedOrder.items.map((item, index) => (
+                      {selectedOrder.order_items?.map((item: any, index: number) => (
                         <TableRow key={index}>
-                          <TableCell>{item.product}</TableCell>
+                          <TableCell>{products.find(p => p.id === item.product_id)?.name || `Produto ID: ${item.product_id}`}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{formatCurrency(item.price)}</TableCell>
+                          <TableCell>{formatCurrency(item.unit_price)}</TableCell>
+                          <TableCell>{formatCurrency(item.total_price)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -379,7 +315,7 @@ export default function Dashboard() {
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold">Valor Total:</span>
-                    <span className="text-2xl font-bold">{formatCurrency(selectedOrder.total)}</span>
+                    <span className="text-2xl font-bold">{formatCurrency(selectedOrder.total_amount)}</span>
                   </div>
                 </div>
 

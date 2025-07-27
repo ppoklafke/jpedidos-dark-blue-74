@@ -42,41 +42,7 @@ import { OrderForm } from "@/components/OrderForm";
 import { Plus, Search, Edit, Eye, Trash2, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-// Mock data - será substituído por dados do Supabase
-const mockOrders = [
-  {
-    id: 1,
-    date: "2024-01-25",
-    client: "João Silva",
-    total: 1250.00,
-    status: "Aberto" as const,
-    withInvoice: true
-  },
-  {
-    id: 2, 
-    date: "2024-01-24",
-    client: "Maria Santos",
-    total: 850.50,
-    status: "Aberto" as const,
-    withInvoice: false
-  },
-  {
-    id: 3,
-    date: "2024-01-24", 
-    client: "Empresa ABC Ltda",
-    total: 3200.00,
-    status: "Fechado" as const,
-    withInvoice: true
-  },
-  {
-    id: 4,
-    date: "2024-01-23",
-    client: "Carlos Oliveira",
-    total: 599.99,
-    status: "Fechado" as const,
-    withInvoice: false
-  }
-];
+// Dados reais do Supabase
 
 export default function Pedidos() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -168,15 +134,21 @@ export default function Pedidos() {
     }
   };
 
-  // Convert mock order to OrderForm format
-  const convertToOrderFormData = (order: typeof mockOrders[0]) => {
+  // Convert database order to OrderForm format
+  const convertToOrderFormData = (order: any) => {
     return {
-      clientId: 1, // Mock client ID
-      date: new Date(order.date),
+      clientId: order.client_id,
+      date: new Date(order.order_date),
       status: order.status as "Aberto" | "Fechado",
-      withInvoice: order.withInvoice,
-      total: order.total,
-      items: [] // Mock empty items for now
+      withInvoice: order.with_invoice,
+      total: order.total_amount,
+      items: order.order_items?.map((item: any) => ({
+        productId: item.product_id,
+        productName: products.find(p => p.id === item.product_id)?.name || "",
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        total: item.total_price
+      })) || []
     };
   };
 
@@ -317,7 +289,13 @@ export default function Pedidos() {
           onOpenChange={setIsOrderFormOpen}
           order={selectedOrder ? convertToOrderFormData(selectedOrder) : undefined}
           mode={orderFormMode}
-          onSubmit={async (data: OrderFormData) => ({ success: true })}
+          onSubmit={async (data: OrderFormData, id?: number) => {
+            if (orderFormMode === "edit" && id) {
+              return await updateOrder(id, data);
+            } else {
+              return await createOrder(data);
+            }
+          }}
           clients={clients.map(c => ({ id: c.id, name: c.name }))}
           products={products.map(p => ({ id: p.id, description: p.name, unitPrice: p.price, status: "Ativo" }))}
         />
@@ -333,11 +311,11 @@ export default function Pedidos() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Data</label>
-                    <p className="font-medium">{formatDate(selectedOrder.date)}</p>
+                    <p className="font-medium">{formatDate(selectedOrder.order_date)}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Cliente</label>
-                    <p className="font-medium">{selectedOrder.client}</p>
+                    <p className="font-medium">{selectedOrder.clients?.name}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Status</label>
@@ -347,14 +325,27 @@ export default function Pedidos() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Nota Fiscal</label>
-                    <Badge variant={selectedOrder.withInvoice ? "default" : "secondary"}>
-                      {selectedOrder.withInvoice ? "Com NF" : "Sem NF"}
+                    <Badge variant={selectedOrder.with_invoice ? "default" : "secondary"}>
+                      {selectedOrder.with_invoice ? "Com NF" : "Sem NF"}
                     </Badge>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Valor Total</label>
-                  <p className="text-2xl font-bold">{formatCurrency(selectedOrder.total)}</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Itens do Pedido</label>
+                    <div className="mt-2 space-y-2">
+                      {selectedOrder.order_items?.map((item: any, index: number) => (
+                        <div key={index} className="flex justify-between items-center p-2 bg-muted rounded">
+                          <span>{products.find(p => p.id === item.product_id)?.name || `Produto ID: ${item.product_id}`}</span>
+                          <span>Qtd: {item.quantity} x {formatCurrency(item.unit_price)} = {formatCurrency(item.total_price)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Valor Total</label>
+                    <p className="text-2xl font-bold">{formatCurrency(selectedOrder.total_amount)}</p>
+                  </div>
                 </div>
               </div>
             )}
