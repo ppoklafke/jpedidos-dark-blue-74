@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  jpedidos-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount do código fonte para hot reload
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    container_name: jpedidos-frontend
+    restart: unless-stopped
+    networks:
+      - jpedidos-network
+
+networks:
+  jpedidos-network:
+    driver: bridge
