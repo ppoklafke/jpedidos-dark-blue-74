@@ -138,6 +138,10 @@ export const useProducts = () => {
     }
   };
 
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
   return {
     products,
     loading,
