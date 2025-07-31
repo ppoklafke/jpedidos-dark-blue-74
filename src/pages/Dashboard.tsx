@@ -25,6 +25,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -34,11 +42,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Eye, CheckCircle, DollarSign, ShoppingCart, Users, Package } from "lucide-react";
+import { Eye, CheckCircle, DollarSign, ShoppingCart, Users, Package, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useOrders } from "@/hooks/useOrders";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Dados reais do Supabase
 
@@ -57,6 +66,7 @@ export default function Dashboard() {
   const { orders, updateOrderStatus } = useOrders();
   const { clients } = useClients();
   const { products } = useProducts();
+  const isMobile = useIsMobile();
 
   // Calcular KPIs baseado nos dados reais
   useEffect(() => {
@@ -236,108 +246,228 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Modal de Detalhes do Pedido */}
-        <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Detalhes do Pedido</DialogTitle>
-            </DialogHeader>
-            {selectedOrder && (
-              <div className="space-y-6">
-                {/* Informações do Cliente */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Informações do Cliente</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Nome</label>
-                      <p className="font-medium">{selectedOrder.clients?.name}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Email</label>
-                      <p className="font-medium">{selectedOrder.clients?.email || "Não informado"}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Telefone</label>
-                      <p className="font-medium">{selectedOrder.clients?.phone || "Não informado"}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Informações do Pedido */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Informações do Pedido</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Data</label>
-                      <p className="font-medium">{formatDate(selectedOrder.order_date)}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Status</label>
-                      <Badge variant={selectedOrder.status === "Aberto" ? "secondary" : "default"}>
-                        {selectedOrder.status}
-                      </Badge>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Nota Fiscal</label>
-                      <Badge variant={selectedOrder.with_invoice ? "default" : "secondary"}>
-                        {selectedOrder.with_invoice ? "Com NF" : "Sem NF"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Itens do Pedido */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Itens do Pedido</h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Quantidade</TableHead>
-                        <TableHead>Valor Unit.</TableHead>
-                        <TableHead>Valor Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedOrder.order_items?.map((item: any, index: number) => (
-                        <TableRow key={index}>
-                          <TableCell>{products.find(p => p.id === item.product_id)?.name || `Produto ID: ${item.product_id}`}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{formatCurrency(item.unit_price)}</TableCell>
-                          <TableCell>{formatCurrency(item.total_price)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Valor Total */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold">Valor Total:</span>
-                    <span className="text-2xl font-bold">{formatCurrency(selectedOrder.total_amount)}</span>
-                  </div>
-                </div>
-
-                {/* Ações */}
-                {selectedOrder.status === "Aberto" && (
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={() => {
-                        setIsDetailsDialogOpen(false);
-                        handleCloseOrder(selectedOrder.id);
-                      }}
-                      className="bg-gradient-primary hover:opacity-90"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Fechar Pedido
+        {/* Modal de Detalhes do Pedido - Responsivo */}
+        {isMobile ? (
+          <Drawer open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+            <DrawerContent className="max-h-[90vh] pb-4">
+              <DrawerHeader className="border-b pb-4">
+                <div className="flex items-center justify-between">
+                  <DrawerTitle>Detalhes do Pedido</DrawerTitle>
+                  <DrawerClose asChild>
+                    <Button variant="ghost" size="icon">
+                      <X className="h-4 w-4" />
                     </Button>
+                  </DrawerClose>
+                </div>
+              </DrawerHeader>
+              
+              {selectedOrder && (
+                <div className="px-4 overflow-y-auto flex-1 space-y-6">
+                  {/* Informações do Cliente */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Informações do Cliente</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                        <p className="font-medium">{selectedOrder.clients?.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Email</label>
+                        <p className="font-medium text-sm">{selectedOrder.clients?.email || "Não informado"}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Telefone</label>
+                        <p className="font-medium">{selectedOrder.clients?.phone || "Não informado"}</p>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+
+                  {/* Informações do Pedido */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Informações do Pedido</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Data</label>
+                        <p className="font-medium">{formatDate(selectedOrder.order_date)}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Status</label>
+                        <div className="mt-1">
+                          <Badge variant={selectedOrder.status === "Aberto" ? "secondary" : "default"}>
+                            {selectedOrder.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Nota Fiscal</label>
+                        <div className="mt-1">
+                          <Badge variant={selectedOrder.with_invoice ? "default" : "secondary"}>
+                            {selectedOrder.with_invoice ? "Com NF" : "Sem NF"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Itens do Pedido */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Itens do Pedido</h3>
+                    <div className="space-y-3">
+                      {selectedOrder.order_items?.map((item: any, index: number) => (
+                        <div key={index} className="border rounded-lg p-3 space-y-2">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Produto</label>
+                            <p className="font-medium text-sm">{products.find(p => p.id === item.product_id)?.name || `Produto ID: ${item.product_id}`}</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs text-muted-foreground">Qtd</label>
+                              <p className="font-medium">{item.quantity}</p>
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Valor Unit.</label>
+                              <p className="font-medium text-xs">{formatCurrency(item.unit_price)}</p>
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Total</label>
+                              <p className="font-medium text-xs">{formatCurrency(item.total_price)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Valor Total */}
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold">Valor Total:</span>
+                      <span className="text-xl font-bold">{formatCurrency(selectedOrder.total_amount)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Footer com ação */}
+              {selectedOrder?.status === "Aberto" && (
+                <DrawerFooter className="border-t pt-4">
+                  <Button
+                    onClick={() => {
+                      setIsDetailsDialogOpen(false);
+                      handleCloseOrder(selectedOrder.id);
+                    }}
+                    className="bg-gradient-primary hover:opacity-90 w-full"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Fechar Pedido
+                  </Button>
+                </DrawerFooter>
+              )}
+            </DrawerContent>
+          </Drawer>
+        ) : (
+          <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+              <DialogHeader>
+                <DialogTitle>Detalhes do Pedido</DialogTitle>
+              </DialogHeader>
+              {selectedOrder && (
+                <div className="space-y-6 overflow-y-auto flex-1 pr-2">
+                  {/* Informações do Cliente */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Informações do Cliente</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                        <p className="font-medium">{selectedOrder.clients?.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Email</label>
+                        <p className="font-medium">{selectedOrder.clients?.email || "Não informado"}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Telefone</label>
+                        <p className="font-medium">{selectedOrder.clients?.phone || "Não informado"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informações do Pedido */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Informações do Pedido</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Data</label>
+                        <p className="font-medium">{formatDate(selectedOrder.order_date)}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Status</label>
+                        <Badge variant={selectedOrder.status === "Aberto" ? "secondary" : "default"}>
+                          {selectedOrder.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Nota Fiscal</label>
+                        <Badge variant={selectedOrder.with_invoice ? "default" : "secondary"}>
+                          {selectedOrder.with_invoice ? "Com NF" : "Sem NF"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Itens do Pedido */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Itens do Pedido</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Produto</TableHead>
+                          <TableHead>Quantidade</TableHead>
+                          <TableHead>Valor Unit.</TableHead>
+                          <TableHead>Valor Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedOrder.order_items?.map((item: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell>{products.find(p => p.id === item.product_id)?.name || `Produto ID: ${item.product_id}`}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>{formatCurrency(item.unit_price)}</TableCell>
+                            <TableCell>{formatCurrency(item.total_price)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Valor Total */}
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold">Valor Total:</span>
+                      <span className="text-2xl font-bold">{formatCurrency(selectedOrder.total_amount)}</span>
+                    </div>
+                  </div>
+
+                  {/* Ações */}
+                  {selectedOrder.status === "Aberto" && (
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() => {
+                          setIsDetailsDialogOpen(false);
+                          handleCloseOrder(selectedOrder.id);
+                        }}
+                        className="bg-gradient-primary hover:opacity-90"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Fechar Pedido
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Dialog de Confirmação para Fechar Pedido */}
         <AlertDialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
