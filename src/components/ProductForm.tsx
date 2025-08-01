@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,17 @@ export function ProductForm({ open, onOpenChange, product, mode, onSubmit: onSub
       status: product?.status || "Ativo",
     },
   });
+
+  useEffect(() => {
+    if (product) {
+      form.reset({
+        description: product.description || "",
+        unit: product.unit || "UN",
+        unitPrice: product.unitPrice || 0,
+        status: product.status || "Ativo",
+      });
+    }
+  }, [product, form]);
 
   const onSubmit = async (data: ProductFormData) => {
     const result = await onSubmitProp(data, product?.id);

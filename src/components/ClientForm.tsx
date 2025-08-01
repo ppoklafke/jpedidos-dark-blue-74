@@ -31,12 +31,12 @@ import InputMask from "react-input-mask";
 
 const clientSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  document: z.string().min(11, "Documento é obrigatório"),
+  document: z.string().optional(),
   type: z.enum(["PF", "PJ"]),
   fantasyName: z.string().optional(),
   stateRegistration: z.string().optional(),
   phone: z.string().min(10, "Telefone é obrigatório"),
-  email: z.string().email("E-mail inválido"),
+  email: z.string().optional(),
   address: z.object({
     street: z.string().optional(),
     number: z.string().optional(),
