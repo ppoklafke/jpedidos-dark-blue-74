@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0", // Permite acesso externo no Docker
-    port: 5173,
+    port: 8080,
     watch: {
       usePolling: true, // Necessário para hot reload no Docker
     },
