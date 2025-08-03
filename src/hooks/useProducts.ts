@@ -7,6 +7,7 @@ export interface Product {
   name: string;
   description: string | null;
   price: number;
+  unit: string;
   stock_quantity: number;
   created_at: string;
   updated_at: string;
@@ -53,6 +54,7 @@ export const useProducts = () => {
           name: productData.description,
           description: productData.description,
           price: productData.unitPrice,
+          unit: productData.unit,
           stock_quantity: 0
         })
         .select()
@@ -85,6 +87,7 @@ export const useProducts = () => {
           name: productData.description,
           description: productData.description,
           price: productData.unitPrice,
+          unit: productData.unit,
         })
         .eq('id', id)
         .select()

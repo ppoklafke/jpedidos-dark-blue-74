@@ -103,7 +103,7 @@ export default function Produtos() {
     return {
       id: product.id,
       description: product.name || product.description,
-      unit: "UN", // Default unit since not stored in DB
+      unit: product.unit || "UN",
       unitPrice: product.price,
       status: ("Ativo" as "Ativo" | "Inativo") // Default to active
     };
@@ -113,7 +113,7 @@ export default function Produtos() {
     return {
       id: product.id,
       description: product.name || product.description,
-      unit: "UN", // Default unit
+      unit: product.unit || "UN",
       unitPrice: product.price,
       status: ("Ativo" as "Ativo" | "Inativo") // Default to active
     };
@@ -181,7 +181,7 @@ export default function Produtos() {
                   {filteredProducts.map((product) => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>UN</TableCell>
+                      <TableCell>{product.unit || "UN"}</TableCell>
                       <TableCell>{formatCurrency(product.price)}</TableCell>
                       <TableCell>
                         <Badge variant="default">Ativo</Badge>
