@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -83,11 +83,11 @@ export function OrderForm({ open, onOpenChange, order, mode, onSubmit: onSubmitP
   const form = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
-      clientId: order?.clientId || 0,
-      date: order?.date || new Date(),
-      status: order?.status || "Aberto",
-      withInvoice: order?.withInvoice || false,
-      items: order?.items || [
+      clientId: 0,
+      date: new Date(),
+      status: "Aberto",
+      withInvoice: false,
+      items: [
         {
           productId: 0,
           productName: "",
@@ -96,9 +96,48 @@ export function OrderForm({ open, onOpenChange, order, mode, onSubmit: onSubmitP
           total: 0,
         },
       ],
-      total: order?.total || 0,
+      total: 0,
     },
   });
+
+  // Reset form when order data changes
+  React.useEffect(() => {
+    if (order && mode === "edit") {
+      form.reset({
+        clientId: order.clientId || 0,
+        date: order.date || new Date(),
+        status: order.status || "Aberto",
+        withInvoice: order.withInvoice || false,
+        items: order.items || [
+          {
+            productId: 0,
+            productName: "",
+            quantity: 1,
+            unitPrice: 0,
+            total: 0,
+          },
+        ],
+        total: order.total || 0,
+      });
+    } else if (mode === "create") {
+      form.reset({
+        clientId: 0,
+        date: new Date(),
+        status: "Aberto",
+        withInvoice: false,
+        items: [
+          {
+            productId: 0,
+            productName: "",
+            quantity: 1,
+            unitPrice: 0,
+            total: 0,
+          },
+        ],
+        total: 0,
+      });
+    }
+  }, [order, mode, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,

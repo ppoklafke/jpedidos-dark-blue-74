@@ -137,17 +137,18 @@ export default function Pedidos() {
   // Convert database order to OrderForm format
   const convertToOrderFormData = (order: any) => {
     return {
-      clientId: order.client_id,
+      id: order.id,
+      clientId: order.client_id || 0,
       date: new Date(order.order_date),
       status: order.status as "Aberto" | "Fechado",
-      withInvoice: order.with_invoice,
-      total: order.total_amount,
+      withInvoice: order.with_invoice || false,
+      total: order.total_amount || 0,
       items: order.order_items?.map((item: any) => ({
-        productId: item.product_id,
+        productId: item.product_id || 0,
         productName: products.find(p => p.id === item.product_id)?.name || "",
-        quantity: item.quantity,
-        unitPrice: item.unit_price,
-        total: item.total_price
+        quantity: item.quantity || 1,
+        unitPrice: item.unit_price || 0,
+        total: item.total_price || 0
       })) || []
     };
   };

@@ -62,15 +62,22 @@ export function ProductForm({ open, onOpenChange, product, mode, onSubmit: onSub
   });
 
   useEffect(() => {
-    if (product) {
+    if (product && mode === "edit") {
       form.reset({
         description: product.description || "",
         unit: product.unit || "UN",
         unitPrice: product.unitPrice || 0,
         status: product.status || "Ativo",
       });
+    } else if (mode === "create") {
+      form.reset({
+        description: "",
+        unit: "UN",
+        unitPrice: 0,
+        status: "Ativo",
+      });
     }
-  }, [product, form]);
+  }, [product, mode, form]);
 
   const onSubmit = async (data: ProductFormData) => {
     const result = await onSubmitProp(data, product?.id);

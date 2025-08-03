@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -66,25 +66,72 @@ export function ClientForm({ open, onOpenChange, client, mode, onSubmit: onSubmi
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
-      name: client?.name || "",
-      document: client?.document || "",
-      type: client?.type || "PF",
-      fantasyName: client?.fantasyName || "",
-      stateRegistration: client?.stateRegistration || "",
-      phone: client?.phone || "",
-      email: client?.email || "",
+      name: "",
+      document: "",
+      type: "PF",
+      fantasyName: "",
+      stateRegistration: "",
+      phone: "",
+      email: "",
       address: {
-        street: client?.address?.street || "",
-        number: client?.address?.number || "",
-        complement: client?.address?.complement || "",
-        neighborhood: client?.address?.neighborhood || "",
-        city: client?.address?.city || "",
-        state: client?.address?.state || "",
-        zipCode: client?.address?.zipCode || "",
+        street: "",
+        number: "",
+        complement: "",
+        neighborhood: "",
+        city: "",
+        state: "",
+        zipCode: "",
       },
-      observations: client?.observations || "",
+      observations: "",
     },
   });
+
+  // Reset form when client data changes
+  React.useEffect(() => {
+    if (client && mode === "edit") {
+      setClientType(client.type || "PF");
+      form.reset({
+        name: client.name || "",
+        document: client.document || "",
+        type: client.type || "PF",
+        fantasyName: client.fantasyName || "",
+        stateRegistration: client.stateRegistration || "",
+        phone: client.phone || "",
+        email: client.email || "",
+        address: {
+          street: client.address?.street || "",
+          number: client.address?.number || "",
+          complement: client.address?.complement || "",
+          neighborhood: client.address?.neighborhood || "",
+          city: client.address?.city || "",
+          state: client.address?.state || "",
+          zipCode: client.address?.zipCode || "",
+        },
+        observations: client.observations || "",
+      });
+    } else if (mode === "create") {
+      setClientType("PF");
+      form.reset({
+        name: "",
+        document: "",
+        type: "PF",
+        fantasyName: "",
+        stateRegistration: "",
+        phone: "",
+        email: "",
+        address: {
+          street: "",
+          number: "",
+          complement: "",
+          neighborhood: "",
+          city: "",
+          state: "",
+          zipCode: "",
+        },
+        observations: "",
+      });
+    }
+  }, [client, mode, form]);
 
   const onSubmit = async (data: ClientFormData) => {
     const clientData = {
