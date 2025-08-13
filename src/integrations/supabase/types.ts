@@ -65,6 +65,24 @@ export type Database = {
         }
         Relationships: []
       }
+      crontable: {
+        Row: {
+          created_at: string
+          id: number
+          numero: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          numero?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          numero?: number | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
