@@ -42,14 +42,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Eye, CheckCircle, DollarSign, ShoppingCart, Users, Package, X } from "lucide-react";
+import { Eye, CheckCircle, DollarSign, ShoppingCart, Users, Package, X, BarChart } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useOrders } from "@/hooks/useOrders";
 import { useClients } from "@/hooks/useClients";
 import { useProducts } from "@/hooks/useProducts";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-// Dados reais do Supabase
 
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
@@ -60,7 +58,8 @@ export default function Dashboard() {
     orders: 0,
     revenue: 0,
     customers: 0,
-    products: 0
+    products: 0,
+    totalProductsSold: 0
   });
 
   const { orders, updateOrderStatus } = useOrders();
@@ -68,18 +67,61 @@ export default function Dashboard() {
   const { products } = useProducts();
   const isMobile = useIsMobile();
 
-  // Calcular KPIs baseado nos dados reais
+  // Função para filtrar dados baseado no período selecionado
+  const getFilteredOrders = () => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    let startDate: Date;
+    switch (selectedPeriod) {
+      case "today":
+        startDate = startOfDay;
+        break;
+      case "thisWeek":
+        startDate = startOfWeek;
+        break;
+      case "thisMonth":
+        startDate = startOfMonth;
+        break;
+      default:
+        startDate = startOfDay;
+    }
+
+    return orders.filter(order => {
+      const orderDate = new Date(order.order_date);
+      return orderDate >= startDate;
+    });
+  };
+
+  // Calcular KPIs baseado no período selecionado
   useEffect(() => {
-    const openOrders = orders.filter(order => order.status === "Aberto");
-    const revenue = openOrders.reduce((sum, order) => sum + order.total_amount, 0);
+    const filteredOrders = getFilteredOrders();
+    const closedOrdersInPeriod = filteredOrders.filter(order => order.status === "Fechado");
+    const revenueInPeriod = closedOrdersInPeriod.reduce((sum, order) => sum + order.total_amount, 0);
+    
+    // Calcular total de produtos vendidos no período
+    const totalProductsSold = closedOrdersInPeriod.reduce((total, order) => {
+      const orderTotal = order.order_items?.reduce((orderSum: number, item: any) => {
+        return orderSum + item.quantity;
+      }, 0) || 0;
+      return total + orderTotal;
+    }, 0);
+
+    // Contar clientes únicos no período
+    const uniqueClientIds = new Set(filteredOrders.map(order => order.client_id));
     
     setKpis({
-      orders: openOrders.length,
-      revenue: revenue,
-      customers: clients.length,
-      products: products.length
+      orders: closedOrdersInPeriod.length,
+      revenue: revenueInPeriod,
+      customers: uniqueClientIds.size,
+      products: products.length,
+      totalProductsSold: totalProductsSold
     });
-  }, [orders, clients, products]);
+  }, [orders, clients, products, selectedPeriod]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -194,13 +236,13 @@ export default function Dashboard() {
             </Select>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
                     <ShoppingCart className="h-8 w-8 text-primary" />
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Pedidos</p>
+                      <p className="text-sm font-medium text-muted-foreground">Pedidos Fechados</p>
                       <p className="text-2xl font-bold">{kpis.orders}</p>
                     </div>
                   </div>
@@ -224,7 +266,7 @@ export default function Dashboard() {
                   <div className="flex items-center space-x-2">
                     <Users className="h-8 w-8 text-info" />
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Clientes</p>
+                      <p className="text-sm font-medium text-muted-foreground">Clientes Ativos</p>
                       <p className="text-2xl font-bold">{kpis.customers}</p>
                     </div>
                   </div>
@@ -234,9 +276,21 @@ export default function Dashboard() {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <Package className="h-8 w-8 text-warning" />
+                    <BarChart className="h-8 w-8 text-warning" />
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Produtos</p>
+                      <p className="text-sm font-medium text-muted-foreground">Produtos Vendidos</p>
+                      <p className="text-2xl font-bold">{kpis.totalProductsSold}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-8 w-8 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Produtos</p>
                       <p className="text-2xl font-bold">{kpis.products}</p>
                     </div>
                   </div>
