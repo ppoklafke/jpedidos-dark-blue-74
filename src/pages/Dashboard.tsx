@@ -71,18 +71,34 @@ export default function Dashboard() {
   const getFilteredOrders = () => {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    // Semana atual: domingo a sábado
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
+    
+    // Semana passada: domingo a sábado da semana anterior
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+    const endOfLastWeek = new Date(startOfWeek);
+    endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
+    endOfLastWeek.setHours(23, 59, 59, 999);
+    
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     let startDate: Date;
+    let endDate: Date | null = null;
+    
     switch (selectedPeriod) {
       case "today":
         startDate = startOfDay;
         break;
       case "thisWeek":
         startDate = startOfWeek;
+        break;
+      case "lastWeek":
+        startDate = startOfLastWeek;
+        endDate = endOfLastWeek;
         break;
       case "thisMonth":
         startDate = startOfMonth;
@@ -93,8 +109,44 @@ export default function Dashboard() {
 
     return orders.filter(order => {
       const orderDate = new Date(order.order_date);
+      if (endDate) {
+        return orderDate >= startDate && orderDate <= endDate;
+      }
       return orderDate >= startDate;
     });
+  };
+
+  // Função para formatar o período selecionado
+  const getFormattedPeriod = () => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+    const endOfLastWeek = new Date(startOfWeek);
+    endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
+    
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    switch (selectedPeriod) {
+      case "today":
+        return `Hoje - ${startOfDay.toLocaleDateString('pt-BR')}`;
+      case "thisWeek":
+        return `Esta Semana - ${startOfWeek.toLocaleDateString('pt-BR')} a ${endOfWeek.toLocaleDateString('pt-BR')}`;
+      case "lastWeek":
+        return `Semana Passada - ${startOfLastWeek.toLocaleDateString('pt-BR')} a ${endOfLastWeek.toLocaleDateString('pt-BR')}`;
+      case "thisMonth":
+        return `Este Mês - ${startOfMonth.toLocaleDateString('pt-BR')} a ${endOfMonth.toLocaleDateString('pt-BR')}`;
+      default:
+        return `Hoje - ${startOfDay.toLocaleDateString('pt-BR')}`;
+    }
   };
 
   // Calcular KPIs baseado no período selecionado
@@ -231,11 +283,21 @@ export default function Dashboard() {
               <SelectContent>
                 <SelectItem value="today">Hoje</SelectItem>
                 <SelectItem value="thisWeek">Esta Semana</SelectItem>
+                <SelectItem value="lastWeek">Semana Passada</SelectItem>
                 <SelectItem value="thisMonth">Este Mês</SelectItem>
               </SelectContent>
             </Select>
           </CardHeader>
           <CardContent>
+            {/* Exibir período selecionado */}
+            <div className="mb-6 p-3 bg-muted/50 rounded-lg border">
+              <p className="text-sm text-muted-foreground mb-1">Período analisado:</p>
+              <p className="font-medium">{getFormattedPeriod()}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                * A semana é calculada de domingo a sábado
+              </p>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <Card>
                 <CardContent className="p-4">
