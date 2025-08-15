@@ -47,6 +47,7 @@ import { toast } from "@/hooks/use-toast";
 export default function Pedidos() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [periodFilter, setPeriodFilter] = useState("todos");
   const { orders, loading, createOrder, updateOrder, updateOrderStatus, deleteOrder } = useOrders();
   const { clients } = useClients();
   const { products } = useProducts();
@@ -65,7 +66,41 @@ export default function Pedidos() {
     const matchesSearch = order.clients?.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "todos" || order.status.toLowerCase() === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    // Filtros de período
+    let matchesPeriod = true;
+    if (periodFilter !== "todos") {
+      const today = new Date();
+      const orderDate = new Date(order.order_date);
+      
+      if (periodFilter === "semana-atual") {
+        // Semana atual: domingo a sábado
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        
+        matchesPeriod = orderDate >= startOfWeek && orderDate <= endOfWeek;
+      } else if (periodFilter === "semana-passada") {
+        // Semana passada: domingo a sábado da semana anterior
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const startOfLastWeek = new Date(startOfWeek);
+        startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+        
+        const endOfLastWeek = new Date(startOfWeek);
+        endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
+        endOfLastWeek.setHours(23, 59, 59, 999);
+        
+        matchesPeriod = orderDate >= startOfLastWeek && orderDate <= endOfLastWeek;
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesPeriod;
   });
 
   const formatCurrency = (value: number) => {
@@ -192,6 +227,16 @@ export default function Pedidos() {
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="aberto">Aberto</SelectItem>
                   <SelectItem value="fechado">Fechado</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Períodos</SelectItem>
+                  <SelectItem value="semana-atual">Semana Atual</SelectItem>
+                  <SelectItem value="semana-passada">Semana Passada</SelectItem>
                 </SelectContent>
               </Select>
             </div>
