@@ -58,8 +58,7 @@ export default function Dashboard() {
     orders: 0,
     revenue: 0,
     customers: 0,
-    products: 0,
-    totalProductsSold: 0
+    productQuantities: [] as Array<{ productId: number, productName: string, totalQuantity: number }>
   });
 
   const { orders, updateOrderStatus } = useOrders();
@@ -155,13 +154,30 @@ export default function Dashboard() {
     const closedOrdersInPeriod = filteredOrders.filter(order => order.status === "Fechado");
     const revenueInPeriod = closedOrdersInPeriod.reduce((sum, order) => sum + order.total_amount, 0);
     
-    // Calcular total de produtos vendidos no período
-    const totalProductsSold = closedOrdersInPeriod.reduce((total, order) => {
-      const orderTotal = order.order_items?.reduce((orderSum: number, item: any) => {
-        return orderSum + item.quantity;
-      }, 0) || 0;
-      return total + orderTotal;
-    }, 0);
+    // Calcular quantidades por produto no período (incluindo todos os status)
+    const productQuantityMap = new Map<number, { productName: string, totalQuantity: number }>();
+    
+    filteredOrders.forEach(order => {
+      order.order_items?.forEach((item: any) => {
+        const product = products.find(p => p.id === item.product_id);
+        const productName = product?.name || `Produto ID: ${item.product_id}`;
+        
+        if (productQuantityMap.has(item.product_id)) {
+          productQuantityMap.get(item.product_id)!.totalQuantity += item.quantity;
+        } else {
+          productQuantityMap.set(item.product_id, {
+            productName,
+            totalQuantity: item.quantity
+          });
+        }
+      });
+    });
+
+    const productQuantities = Array.from(productQuantityMap.entries()).map(([productId, data]) => ({
+      productId,
+      productName: data.productName,
+      totalQuantity: data.totalQuantity
+    }));
 
     // Contar clientes únicos no período
     const uniqueClientIds = new Set(filteredOrders.map(order => order.client_id));
@@ -170,8 +186,7 @@ export default function Dashboard() {
       orders: closedOrdersInPeriod.length,
       revenue: revenueInPeriod,
       customers: uniqueClientIds.size,
-      products: products.length,
-      totalProductsSold: totalProductsSold
+      productQuantities: productQuantities
     });
   }, [orders, clients, products, selectedPeriod]);
 
@@ -298,7 +313,7 @@ export default function Dashboard() {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
@@ -334,31 +349,29 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <BarChart className="h-8 w-8 text-warning" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Produtos Vendidos</p>
-                      <p className="text-2xl font-bold">{kpis.totalProductsSold}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-8 w-8 text-accent" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total Produtos</p>
-                      <p className="text-2xl font-bold">{kpis.products}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
+
+            {/* Cards individuais para cada produto */}
+            {kpis.productQuantities.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">Produtos no Período</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {kpis.productQuantities.map((product) => (
+                    <Card key={product.productId}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <Package className="h-6 w-6 text-primary" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-muted-foreground truncate">{product.productName}</p>
+                            <p className="text-lg font-bold">{product.totalQuantity}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
